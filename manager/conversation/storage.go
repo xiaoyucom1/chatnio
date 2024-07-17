@@ -8,6 +8,20 @@ import (
 	"fmt"
 )
 
+type Conversation struct {
+	UserID   int64
+	Id       int64
+	Name     string
+	Model    string
+	Message  []globals.Message
+	// 其他字段...
+}
+
+func (c *Conversation) GetMessage() string {
+	// 模拟获取聊天消息的逻辑，这里需要根据实际情况修改
+	return utils.ToJson(c.Message)
+}
+
 func (c *Conversation) SaveConversation(db *sql.DB) bool {
 	if c.UserID == -1 {
 		// anonymous request
@@ -36,8 +50,17 @@ func (c *Conversation) SaveConversation(db *sql.DB) bool {
 		globals.Info(fmt.Sprintf("execute error during save conversation: %s", err.Error()))
 		return false
 	}
+
+	// 将聊天记录保存到日志文件中
+	logEntry := fmt.Sprintf("UserID: %d, ConversationID: %d, ConversationName: %s, Data: %s, Model: %s\n", c.UserID, c.Id, c.Name, data, c.Model)
+	err = utils.AppendToFile("logs/conversation.log", logEntry)
+	if err != nil {
+		globals.Warn(fmt.Sprintf("failed to log conversation: %s", err.Error()))
+	}
+
 	return true
 }
+
 func GetConversationLengthByUserID(db *sql.DB, userId int64) int64 {
 	var length int64
 	err := globals.QueryRowDb(db, "SELECT MAX(conversation_id) FROM conversation WHERE user_id = ?", userId).Scan(&length)
